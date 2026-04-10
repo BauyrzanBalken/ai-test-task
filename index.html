@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Orders Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 90%; max-width: 900px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1 { color: #1a73e8; text-align: center; }
+        #status { text-align: center; color: #666; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Дашборд заказов из RetailCRM</h1>
+        <div id="status">Загрузка данных из Supabase...</div>
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <script>
+        // ТВОИ ДАННЫЕ (ПРОВЕРЬ ИХ ЕЩЕ РАЗ!)
+        const SUPABASE_URL = 'https://sidmyoefdtbkdyvptzrs.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_1zG_xgcdFaDc8DDXtL2eoA_u7PB0Z21';
+
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function loadData() {
+            const statusEl = document.getElementById('status');
+            
+            try {
+                // Запрос к таблице
+                const { data, error } = await supabaseClient
+                    .from('orders')
+                    .select('first_name, total_sum')
+                    .order('total_sum', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    statusEl.innerText = "❌ Данные в таблице не найдены. Проверь Supabase!";
+                    return;
+                }
+
+                statusEl.innerText = `✅ Загружено ${data.length} заказов`;
+
+                const labels = data.map(o => o.first_name);
+                const values = data.map(o => o.total_sum);
+
+                const ctx = document.getElementById('myChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Сумма заказа (₸)',
+                            data: values,
+                            backgroundColor: 'rgba(26, 115, 232, 0.6)',
+                            borderColor: '#1a73e8',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            } catch (err) {
+                console.error('Ошибка:', err);
+                statusEl.innerText = "❌ Ошибка: " + err.message;
+                statusEl.style.color = "red";
+            }
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
